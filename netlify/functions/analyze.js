@@ -106,19 +106,32 @@ export default async (request, context) => {
     const data = await response.json();
 
     if (data.error) {
-      console.error("Gemini error:", data.error);
-      return Response.json({ error: "AI เกิดข้อผิดพลาด: " + (data.error.message || "ลองใหม่") }, { status: 502 });
+      console.error("Gemini error:", JSON.stringify(data.error));
+      return Response.json({ error: "AI เกิดข้อผิดพลาด: " + (data.error.message || JSON.stringify(data.error)) }, { status: 502 });
     }
 
-    const text = data.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("") || "";
-    const clean = text.replace(/```json|```/g, "").trim();
+    if (!data.candidates || !data.candidates[0]) {
+      console.error("No candidates:", JSON.stringify(data));
+      return Response.json({ error: "AI ไม่ตอบกลับ อาจถูกบล็อก ลองรูปอื่น" }, { status: 502 });
+    }
+
+    const text = data.candidates[0]?.content?.parts?.map(p => p.text || "").join("") || "";
+    const clean = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+
+    if (!clean) {
+      console.error("Empty response text. Full data:", JSON.stringify(data).substring(0, 500));
+      return Response.json({ error: "AI ตอบกลับว่างเปล่า ลองถ่ายรูปใหม่" }, { status: 502 });
+    }
 
     try {
-      const parsed = JSON.parse(clean);
+      // Try to extract JSON from response even if there's extra text
+      const jsonMatch = clean.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : clean;
+      const parsed = JSON.parse(jsonStr);
       return Response.json(parsed);
     } catch (e) {
-      console.error("Parse error:", e, "Raw:", clean);
-      return Response.json({ error: "AI อ่านฉลากไม่ได้ ลองถ่ายรูปใหม่ให้ชัดขึ้น" }, { status: 502 });
+      console.error("Parse error:", e.message, "Raw text:", clean.substring(0, 300));
+      return Response.json({ error: "AI อ่านฉลากไม่ได้ ลองถ่ายรูปใหม่ให้ชัดขึ้น (debug: " + clean.substring(0, 100) + ")" }, { status: 502 });
     }
 
   } catch (err) {
