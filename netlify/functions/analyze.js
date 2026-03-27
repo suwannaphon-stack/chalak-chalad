@@ -99,7 +99,7 @@ export default async (request, context) => {
             { text: PROMPT }
           ]
         }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 1024 }
+        generationConfig: { temperature: 0.1, maxOutputTokens: 2048, responseMimeType: "application/json" }
       })
     });
 
@@ -124,14 +124,29 @@ export default async (request, context) => {
     }
 
     try {
-      // Try to extract JSON from response even if there's extra text
-      const jsonMatch = clean.match(/\{[\s\S]*\}/);
-      const jsonStr = jsonMatch ? jsonMatch[0] : clean;
+      // responseMimeType: "application/json" forces Gemini to return pure JSON
+      const jsonStr = clean;
       const parsed = JSON.parse(jsonStr);
+      
+      // Validate required fields exist
+      if (parsed.error) {
+        return Response.json({ error: parsed.error }, { status: 200 });
+      }
+      if (!parsed.per_package && !parsed.nutrients) {
+        return Response.json({ error: "AI ไม่สามารถอ่านค่าจากฉลากได้ ลองถ่ายรูปใหม่ให้ชัดขึ้น" }, { status: 502 });
+      }
       return Response.json(parsed);
     } catch (e) {
-      console.error("Parse error:", e.message, "Raw text:", clean.substring(0, 300));
-      return Response.json({ error: "AI อ่านฉลากไม่ได้ ลองถ่ายรูปใหม่ให้ชัดขึ้น (debug: " + clean.substring(0, 100) + ")" }, { status: 502 });
+      // Fallback: try to find JSON in text
+      try {
+        let depth = 0, start = -1;
+        for (let i = 0; i < clean.length; i++) {
+          if (clean[i] === '{') { if (start === -1) start = i; depth++; }
+          else if (clean[i] === '}') { depth--; if (depth === 0 && start !== -1) { const parsed = JSON.parse(clean.substring(start, i + 1)); return Response.json(parsed); } }
+        }
+      } catch (e2) {}
+      console.error("Parse error:", e.message, "Raw:", clean.substring(0, 500));
+      return Response.json({ error: "AI อ่านฉลากไม่ได้ ลองถ่ายรูปใหม่ให้ชัดขึ้น" }, { status: 502 });
     }
 
   } catch (err) {
