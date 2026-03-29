@@ -67,7 +67,7 @@ input[type=file]{display:none}
 .tf .te{font-size:28px;margin-bottom:4px}
 .tf .tv{font-size:20px;font-weight:700}.tf .tv small{font-size:12px;font-weight:400}
 .tf.green .tv{color:var(--green)}.tf.amber .tv{color:var(--amber)}.tf.red .tv{color:var(--red)}
-.tf .tn{font-size:12px;color:var(--dim);font-weight:500;margin-top:2px}.tf .tp{font-size:11px;color:var(--muted)}
+.tf .tn{font-size:12px;color:var(--dim);font-weight:500;margin-top:2px}.tf .tp{font-size:14px;font-weight:600}
 .tf .ts{margin-top:6px;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:600;display:inline-block}
 .tf.green .ts{background:rgba(22,163,74,.12);color:var(--green)}.tf.amber .ts{background:rgba(217,119,6,.12);color:var(--amber)}.tf.red .ts{background:rgba(220,38,38,.12);color:var(--red)}
 .nl{display:flex;flex-direction:column;gap:11px}
@@ -137,8 +137,8 @@ function reset(){b64=null;sw('upload')}
 async function go(){if(!b64)return;sw('loading');const sub=$('lS');const steps=['กำลังอ่านฉลาก...','วิเคราะห์สารอาหาร...','คำนวณค่า GDA...','เตรียมผลลัพธ์...'];let si=0;sub.textContent=steps[0];const iv=setInterval(()=>{si++;if(si<steps.length)sub.textContent=steps[si]},1200);
 try{const res=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image_base64:b64,media_type:mt})});clearInterval(iv);const data=await res.json();if(data.error){showErr(data.error)}else{showRes(data)}}catch(e){clearInterval(iv);showErr('เชื่อมต่อไม่ได้ กรุณาลองใหม่')}}
 function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
-function mkTraf(data,tl,te,tt){return ['พลังงาน','น้ำตาล','ไขมัน','โซเดียม'].map((l,i)=>{const k=['energy','sugar','fat','sodium'][i];const d=data[k];const lv=tl[k];return`<div class="tf ${lv}"><div class="te">${te[lv]}</div><div class="tv">${d.value}<small> ${d.unit}</small></div><div class="tn">${l}</div><div class="tp">${d.gda_percent}% ของค่าแนะนำ</div><div class="ts">${tt[lv]}</div></div>`}).join('')}
-function mkBars(data){const pc=p=>p<=10?'var(--green)':p<=25?'var(--amber)':'var(--red)';return ['พลังงาน','น้ำตาล','ไขมัน','โซเดียม'].map((nm,i)=>{const k=['energy','sugar','fat','sodium'][i];const d=data[k];const c=pc(d.gda_percent);return`<div class="nr"><div class="nd" style="background:${c}"></div><div class="ni"><div class="nt"><span class="nn">${nm}</span><span class="nv">${d.value} ${d.unit}</span></div><div class="nb"><div class="nf" style="background:${c}" data-w="${Math.min(d.gda_percent,100)}%"></div></div><div class="np">${d.gda_percent}%</div></div></div>`}).join('')}
+function mkTraf(data,tl,te,tt){const uTh={'kcal':'กิโลแคลอรี','g':'กรัม','mg':'มิลลิกรัม'};return ['พลังงาน','น้ำตาล','ไขมัน','โซเดียม'].map((l,i)=>{const k=['energy','sugar','fat','sodium'][i];const d=data[k];const lv=tl[k];return`<div class="tf ${lv}"><div class="te">${te[lv]}</div><div class="tv">${d.value}<small> ${uTh[d.unit]||d.unit}</small></div><div class="tn">${l}</div><div class="tp">${d.gda_percent}% ของค่าแนะนำ</div><div class="ts">${tt[lv]}</div></div>`}).join('')}
+function mkBars(data){const pc=p=>p<=10?'var(--green)':p<=25?'var(--amber)':'var(--red)';const uTh={'kcal':'กิโลแคลอรี','g':'กรัม','mg':'มิลลิกรัม'};return ['พลังงาน','น้ำตาล','ไขมัน','โซเดียม'].map((nm,i)=>{const k=['energy','sugar','fat','sodium'][i];const d=data[k];const c=pc(d.gda_percent);return`<div class="nr"><div class="nd" style="background:${c}"></div><div class="ni"><div class="nt"><span class="nn">${nm}</span><span class="nv">${d.value} ${uTh[d.unit]||d.unit}</span></div><div class="nb"><div class="nf" style="background:${c}" data-w="${Math.min(d.gda_percent,100)}%"></div></div><div class="np">${d.gda_percent}%</div></div></div>`}).join('')}
 function showRes(r){
 const te={green:'✅',amber:'⚠️',red:'🔴'};const tt={green:'ปลอดภัย',amber:'ระวัง',red:'สูงเกิน!'};
 const pkg=r.per_package;const srv=r.per_serving;const spp=r.servings_per_package||1;
